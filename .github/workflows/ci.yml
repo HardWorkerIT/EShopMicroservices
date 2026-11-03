@@ -47,7 +47,7 @@ jobs:
         shell: pwsh
         run: ./eng/verify_coverage.ps1 -ResultsDirectory TestResults -MinimumLine 20 -MinimumBranch 30
       - name: Publish coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-coverage
           path: TestResults/**/coverage.cobertura.xml
