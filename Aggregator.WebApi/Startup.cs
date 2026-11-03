@@ -1,3 +1,6 @@
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,13 +12,11 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using Ocelot.Middleware;
 
 namespace Aggregator.WebApi
 {
@@ -32,7 +33,7 @@ namespace Aggregator.WebApi
         public void ConfigureServices(IServiceCollection services)
         {
             // Register HttpClient
-            services.AddHttpClient();
+            services.ConfigureHttpClientDefaults(builder => builder.AddStandardResilienceHandler());
             
             // Register microservice clients
             services.AddScoped<ICustomerService, CustomerService>();
@@ -55,6 +56,11 @@ namespace Aggregator.WebApi
                 });
             });
             #endregion
+            services.AddOpenTelemetry().ConfigureResource(resource => resource.AddService("Aggregator.WebApi"))
+                .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddOtlpExporter())
+                .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation().AddOtlpExporter());
+            services.AddHealthChecks()
+                .AddCheck<Aggregator.WebApi.HealthChecks.GatewayDependenciesHealthCheck>("dependencies", tags: new[] { "ready" });
             services.AddControllers();
         }
 
@@ -73,8 +79,6 @@ namespace Aggregator.WebApi
 
             app.UseRouting();
 
-            app.UseOcelot();
-
             app.UseAuthorization();
             app.UseSwagger();
             app.UseSwaggerUI(c =>
@@ -84,6 +88,8 @@ namespace Aggregator.WebApi
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = _ => false });
+                endpoints.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
             });
         }
     }

@@ -1,16 +1,97 @@
 services:
+  jaeger:
+    image: jaegertracing/jaeger:2.22.0
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+    networks:
+      - eshop-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.164.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      - jaeger
+    networks:
+      - eshop-network
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - otel-collector
+    networks:
+      - eshop-network
+
+  grafana:
+    image: grafana/grafana:13.2.4
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - eshop-network
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=eshop
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in your .env file}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - eshop-network
+
   # SQL Server для Customer
   customer-db:
     image: mcr.microsoft.com/mssql/server:2019-latest
     container_name: customer-sqlserver
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
+      - SA_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
+      - DATABASE_NAME=CustomerDB
+      - APP_LOGIN=eshop_customer
+      - APP_DB_PASSWORD=${CUSTOMER_DB_PASSWORD:?Set CUSTOMER_DB_PASSWORD in your .env file}
+      - MIGRATOR_LOGIN=eshop_customer_migrator
+      - MIGRATOR_DB_PASSWORD=${CUSTOMER_MIGRATOR_DB_PASSWORD:?Set CUSTOMER_MIGRATOR_DB_PASSWORD in your .env file}
       - MSSQL_PID=Developer
+    entrypoint: ["/bin/bash", "/sql-init/initialize-sqlserver.sh"]
     ports:
       - "1433:1433"
     volumes:
       - customer-db-data:/var/opt/mssql
+      - ./sql-init/initialize-sqlserver.sh:/sql-init/initialize-sqlserver.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${SA_PASSWORD}\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     networks:
       - eshop-network
 
@@ -20,12 +101,25 @@ services:
     container_name: order-sqlserver
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
+      - SA_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
+      - DATABASE_NAME=OrderDB
+      - APP_LOGIN=eshop_order
+      - APP_DB_PASSWORD=${ORDER_DB_PASSWORD:?Set ORDER_DB_PASSWORD in your .env file}
+      - MIGRATOR_LOGIN=eshop_order_migrator
+      - MIGRATOR_DB_PASSWORD=${ORDER_MIGRATOR_DB_PASSWORD:?Set ORDER_MIGRATOR_DB_PASSWORD in your .env file}
       - MSSQL_PID=Developer
+    entrypoint: ["/bin/bash", "/sql-init/initialize-sqlserver.sh"]
     ports:
       - "1434:1433"
     volumes:
       - order-db-data:/var/opt/mssql
+      - ./sql-init/initialize-sqlserver.sh:/sql-init/initialize-sqlserver.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${SA_PASSWORD}\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     networks:
       - eshop-network
 
@@ -35,12 +129,25 @@ services:
     container_name: product-sqlserver
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=YourStrong@Passw0rd
+      - SA_PASSWORD=${DB_PASSWORD:?Set DB_PASSWORD in your .env file}
+      - DATABASE_NAME=ProductDB
+      - APP_LOGIN=eshop_product
+      - APP_DB_PASSWORD=${PRODUCT_DB_PASSWORD:?Set PRODUCT_DB_PASSWORD in your .env file}
+      - MIGRATOR_LOGIN=eshop_product_migrator
+      - MIGRATOR_DB_PASSWORD=${PRODUCT_MIGRATOR_DB_PASSWORD:?Set PRODUCT_MIGRATOR_DB_PASSWORD in your .env file}
       - MSSQL_PID=Developer
+    entrypoint: ["/bin/bash", "/sql-init/initialize-sqlserver.sh"]
     ports:
       - "1435:1433"
     volumes:
       - product-db-data:/var/opt/mssql
+      - ./sql-init/initialize-sqlserver.sh:/sql-init/initialize-sqlserver.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${SA_PASSWORD}\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
     networks:
       - eshop-network
 
@@ -51,15 +158,35 @@ services:
       dockerfile: Customer.Microservice/Dockerfile
     container_name: customer-service
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Server=customer-db;Database=CustomerDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - SeedData__Enabled=true
+      - Jwt__Issuer=eshop
+      - Jwt__Audience=eshop-api
+      - Jwt__SigningKey=${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in your .env file}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - ConnectionStrings__DefaultConnection=Server=customer-db;Database=CustomerDB;User Id=eshop_customer;Password=${CUSTOMER_DB_PASSWORD:?Set CUSTOMER_DB_PASSWORD in your .env file};TrustServerCertificate=True;
+      - ConnectionStrings__MigrationConnection=Server=customer-db;Database=CustomerDB;User Id=eshop_customer_migrator;Password=${CUSTOMER_MIGRATOR_DB_PASSWORD:?Set CUSTOMER_MIGRATOR_DB_PASSWORD in your .env file};TrustServerCertificate=True;
+      - RabbitMq__HostName=rabbitmq
+      - RabbitMq__UserName=eshop
+      - RabbitMq__Password=${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in your .env file}
     ports:
       - "5001:80"
     depends_on:
-      - customer-db
+      customer-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - eshop-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     restart: on-failure
 
   # Order Microservice
@@ -69,15 +196,37 @@ services:
       dockerfile: Order.Microservice/Dockerfile
     container_name: order-service
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Server=order-db;Database=OrderDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - SeedData__Enabled=true
+      - Jwt__Issuer=eshop
+      - Jwt__Audience=eshop-api
+      - Jwt__SigningKey=${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in your .env file}
+      - ServiceAuth__Key=${SERVICE_AUTH_KEY:?Set SERVICE_AUTH_KEY in your .env file}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - ConnectionStrings__DefaultConnection=Server=order-db;Database=OrderDB;User Id=eshop_order;Password=${ORDER_DB_PASSWORD:?Set ORDER_DB_PASSWORD in your .env file};TrustServerCertificate=True;
+      - ConnectionStrings__MigrationConnection=Server=order-db;Database=OrderDB;User Id=eshop_order_migrator;Password=${ORDER_MIGRATOR_DB_PASSWORD:?Set ORDER_MIGRATOR_DB_PASSWORD in your .env file};TrustServerCertificate=True;
+      - MicroserviceUrls__ProductService=http://product-service
+      - RabbitMq__HostName=rabbitmq
+      - RabbitMq__UserName=eshop
+      - RabbitMq__Password=${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in your .env file}
     ports:
       - "5002:80"
     depends_on:
-      - order-db
+      order-db:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - eshop-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     restart: on-failure
 
   # Product Microservice
@@ -87,15 +236,33 @@ services:
       dockerfile: Product.Microservice/Dockerfile
     container_name: product-service
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Server=product-db;Database=ProductDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - SeedData__Enabled=true
+      - Jwt__Issuer=eshop
+      - Jwt__Audience=eshop-api
+      - Jwt__SigningKey=${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in your .env file}
+      - ServiceAuth__Key=${SERVICE_AUTH_KEY:?Set SERVICE_AUTH_KEY in your .env file}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - ConnectionStrings__DefaultConnection=Server=product-db;Database=ProductDB;User Id=eshop_product;Password=${PRODUCT_DB_PASSWORD:?Set PRODUCT_DB_PASSWORD in your .env file};TrustServerCertificate=True;
+      - ConnectionStrings__MigrationConnection=Server=product-db;Database=ProductDB;User Id=eshop_product_migrator;Password=${PRODUCT_MIGRATOR_DB_PASSWORD:?Set PRODUCT_MIGRATOR_DB_PASSWORD in your .env file};TrustServerCertificate=True;
     ports:
       - "5003:80"
     depends_on:
-      - product-db
+      product-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - eshop-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     restart: on-failure
 
   # Aggregator API Gateway
@@ -105,19 +272,31 @@ services:
       dockerfile: Aggregator.WebApi/Dockerfile
     container_name: aggregator
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - MicroserviceUrls__CustomerService=http://customer-service
       - MicroserviceUrls__OrderService=http://order-service
       - MicroserviceUrls__ProductService=http://product-service
     ports:
       - "5000:80"
     depends_on:
-      - customer-service
-      - order-service
-      - product-service
+      customer-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     networks:
       - eshop-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
     restart: on-failure
 
 networks:
@@ -128,4 +307,6 @@ volumes:
   customer-db-data:
   order-db-data:
   product-db-data:
+  prometheus-data:
+  grafana-data:
 

@@ -4,5 +4,53 @@
         <name>Order.Microservice</name>
     </assembly>
     <members>
+        <member name="T:Order.Microservice.Migrations.Generated.InitialSchema">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.InitialSchema.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.InitialSchema.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.InitialSchema.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Order.Microservice.Migrations.Generated.AddOrderQuantity">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.AddOrderQuantity.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.AddOrderQuantity.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.AddOrderQuantity.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Order.Microservice.Migrations.Generated.AddOutbox">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.AddOutbox.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.AddOutbox.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.AddOutbox.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Order.Microservice.Migrations.Generated.AddInventoryReservationRecovery">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.AddInventoryReservationRecovery.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.AddInventoryReservationRecovery.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Order.Microservice.Migrations.Generated.AddInventoryReservationRecovery.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
     </members>
 </doc>

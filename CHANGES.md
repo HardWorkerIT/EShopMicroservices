@@ -1,3 +1,14 @@
+# Обновления проекта
+
+## 2026-11-03 — зависимости и проверки безопасности
+
+- Microsoft.Data.SqlClient обновлён до 6.1.8; его транзитивная зависимость System.Security.Cryptography.Pkcs теперь разрешается в исправленную версию 9.0.21.
+- Проверка `dotnet list Integration.Tests/Integration.Tests.csproj package --vulnerable --include-transitive` не находит уязвимых пакетов.
+- NuGet Audit уровней NU1901–NU1904 повышены до ошибок сборки.
+- Добавлен Dependabot: еженедельные обновления NuGet, Docker-образов и GitHub Actions; NuGet patch/minor сгруппированы по проектам.
+- CI настроен на запуск SQL Server и проверку миграций Customer, Order и Product в чистых отдельных базах.
+- Исправлены advisory [GHSA-846f-f764-76mx](https://github.com/dotnet/runtime/security/advisories/GHSA-846f-f764-76mx) и [GHSA-2fmv-rv2c-59x7](https://github.com/dotnet/runtime/security/advisories/GHSA-2fmv-rv2c-59x7).
+
 # Изменения для Docker контейнеризации
 
 ## Дата: 2025-11-20
@@ -122,7 +133,7 @@
 **⚠️ ВАЖНО:** Используйте эти credentials только для разработки!
 
 - **Пользователь:** sa
-- **Пароль:** YourStrong@Passw0rd
+- **Пароль:** <DB_PASSWORD from .env>
 
 Для production окружения обязательно смените пароль!
 

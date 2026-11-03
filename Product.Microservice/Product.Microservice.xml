@@ -4,5 +4,53 @@
         <name>Product.Microservice</name>
     </assembly>
     <members>
+        <member name="T:Product.Microservice.Migrations.Generated.InitialSchema">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.InitialSchema.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.InitialSchema.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.InitialSchema.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Product.Microservice.Migrations.Generated.AddInventoryCount">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.AddInventoryCount.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.AddInventoryCount.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.AddInventoryCount.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Product.Microservice.Migrations.Generated.AddProductNameIndex">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.AddProductNameIndex.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.AddProductNameIndex.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.AddProductNameIndex.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Product.Microservice.Migrations.Generated.AddIdempotentInventoryReservations">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.AddIdempotentInventoryReservations.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.AddIdempotentInventoryReservations.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Product.Microservice.Migrations.Generated.AddIdempotentInventoryReservations.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
     </members>
 </doc>

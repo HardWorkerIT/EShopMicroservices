@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace Customer.Microservice.Data
 {
@@ -12,10 +12,26 @@ namespace Customer.Microservice.Data
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
         {
-            Database.OpenConnection();
-            Database.EnsureCreated();
+        }
 
-            if (Customers.Any() is false)
+        public async Task InitializeDatabaseAsync(bool seedDemoData, CancellationToken cancellationToken, string migrationConnectionString = null)
+        {
+            var runtimeConnectionString = Database.GetConnectionString();
+            if (!string.IsNullOrWhiteSpace(migrationConnectionString))
+                Database.SetConnectionString(migrationConnectionString);
+            try
+            {
+                await Database.MigrateAsync(cancellationToken);
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(migrationConnectionString))
+                    Database.SetConnectionString(runtimeConnectionString);
+            }
+
+            if (!seedDemoData) return;
+
+            if (await Customers.AnyAsync(cancellationToken) is false)
             {
                 Customers.Add(new Entities.Customer
                 {
@@ -23,11 +39,12 @@ namespace Customer.Microservice.Data
                     Name = "Guest"
                 });
 
-                SaveChanges();
+                await base.SaveChangesAsync(cancellationToken);
             }
         }
 
         public DbSet<Entities.Customer> Customers{ get; set; }
+        public DbSet<Entities.OrderProjection> OrderProjections { get; set; }
 
         public Task<int> SaveChangesAsync()
         {

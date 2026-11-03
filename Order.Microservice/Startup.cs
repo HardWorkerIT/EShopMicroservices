@@ -1,3 +1,9 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,9 +60,39 @@ namespace Order.Microservice
                     Version = "v1",
                     Title = "Order Microservice API",
                 });
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    Description = "JWT issued by the configured trusted issuer."
+                });
+                c.OperationFilter<Order.Microservice.Swagger.AuthorizeOperationFilter>();
             });
             #endregion
+            services.AddOpenTelemetry().ConfigureResource(resource => resource.AddService("Order.Microservice"))
+                .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddOtlpExporter())
+                .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation().AddOtlpExporter());
+                        var jwtKey = Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey must be configured.");
+            if (Encoding.UTF8.GetByteCount(jwtKey) < 32) throw new InvalidOperationException("Jwt:SigningKey must contain at least 32 bytes.");
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true, ValidIssuer = Configuration["Jwt:Issuer"],
+                    ValidateAudience = true, ValidAudience = Configuration["Jwt:Audience"],
+                    ValidateLifetime = true, ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+                };
+            });
+            services.AddAuthorization();
             services.AddControllers();
+            services.AddHttpClient<Order.Microservice.Clients.IProductInventoryClient, Order.Microservice.Clients.ProductInventoryClient>();
+            services.AddHostedService<Order.Microservice.Events.OutboxPublisher>();
+            services.AddScoped<Order.Microservice.Events.InventoryReservationRecoveryService>();
+            services.AddHostedService<Order.Microservice.Events.InventoryReservationRecoveryWorker>();
+            services.AddHealthChecks().AddCheck<Order.Microservice.HealthChecks.DatabaseHealthCheck>("database", tags: new[] { "ready" });
+            services.AddHostedService<DatabaseInitializer>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -74,6 +110,7 @@ namespace Order.Microservice
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
             app.UseSwagger();
             app.UseSwaggerUI(c =>
@@ -83,6 +120,8 @@ namespace Order.Microservice
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = _ => false });
+                endpoints.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
             });
         }
     }

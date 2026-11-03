@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
@@ -21,6 +24,7 @@ namespace Aggregator.WebApi.Middleware
 
         public async Task InvokeAsync(HttpContext context)
         {
+            using var logScope = _logger.BeginScope(new Dictionary<string, object> { ["TraceId"] = Activity.Current?.TraceId.ToString() ?? context.TraceIdentifier });
             try
             {
                 await _next(context);
@@ -45,14 +49,8 @@ namespace Aggregator.WebApi.Middleware
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)statusCode;
 
-            var response = new
-            {
-                statusCode = context.Response.StatusCode,
-                message = message,
-                detailed = exception.Message,
-                timestamp = DateTime.UtcNow
-            };
-
+            var response = new ProblemDetails { Status = context.Response.StatusCode, Title = message, Instance = context.Request.Path };
+            response.Extensions["traceId"] = context.TraceIdentifier;
             var jsonResponse = JsonSerializer.Serialize(response);
             return context.Response.WriteAsync(jsonResponse);
         }

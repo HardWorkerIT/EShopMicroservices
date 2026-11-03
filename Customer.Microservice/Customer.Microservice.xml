@@ -4,5 +4,29 @@
         <name>Customer.Microservice</name>
     </assembly>
     <members>
+        <member name="T:Customer.Microservice.Migrations.Generated.InitialSchema">
+            <inheritdoc />
+        </member>
+        <member name="M:Customer.Microservice.Migrations.Generated.InitialSchema.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Customer.Microservice.Migrations.Generated.InitialSchema.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Customer.Microservice.Migrations.Generated.InitialSchema.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:Customer.Microservice.Migrations.Generated.AddOrderProjection">
+            <inheritdoc />
+        </member>
+        <member name="M:Customer.Microservice.Migrations.Generated.AddOrderProjection.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Customer.Microservice.Migrations.Generated.AddOrderProjection.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:Customer.Microservice.Migrations.Generated.AddOrderProjection.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
     </members>
 </doc>

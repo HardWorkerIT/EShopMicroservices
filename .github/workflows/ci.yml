@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: EShop_CI_StrongPassword1!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'EShop_CI_StrongPassword1!' -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+          --health-start-period 30s
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore Microservice.WebApi.sln -m:1
+      - name: Restore local tools
+        run: dotnet tool restore
+      - name: Build
+        run: dotnet build Microservice.WebApi.sln --configuration Release --no-restore -m:1
+      - name: Validate EF Core models against migrations
+        run: |
+          dotnet ef migrations has-pending-model-changes --project Customer.Microservice --startup-project Customer.Microservice
+          dotnet ef migrations has-pending-model-changes --project Order.Microservice --startup-project Order.Microservice
+          dotnet ef migrations has-pending-model-changes --project Product.Microservice --startup-project Product.Microservice
+      - name: Integration tests
+        timeout-minutes: 10
+        env:
+          ESHOP_SQLSERVER_ADMIN_CONNECTION: "Server=localhost,1433;Database=master;User Id=sa;Password=EShop_CI_StrongPassword1!;Encrypt=False;TrustServerCertificate=True;Connect Timeout=5"
+        run: dotnet test Integration.Tests/Integration.Tests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory TestResults
+      - name: Verify coverage floors
+        shell: pwsh
+        run: ./eng/verify_coverage.ps1 -ResultsDirectory TestResults -MinimumLine 20 -MinimumBranch 30
+      - name: Publish coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-coverage
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: error
+      - name: Validate Docker Compose
+        env:
+          DB_PASSWORD: ComposeValidationPassword1!
+          CUSTOMER_DB_PASSWORD: ComposeCustomerDbPassword3!
+          ORDER_DB_PASSWORD: ComposeOrderDbPassword4!
+          PRODUCT_DB_PASSWORD: ComposeProductDbPassword5!
+          CUSTOMER_MIGRATOR_DB_PASSWORD: ComposeCustomerMigratorPassword6!
+          ORDER_MIGRATOR_DB_PASSWORD: ComposeOrderMigratorPassword7!
+          PRODUCT_MIGRATOR_DB_PASSWORD: ComposeProductMigratorPassword8!
+          RABBITMQ_PASSWORD: ComposeValidationPassword2!
+          JWT_SIGNING_KEY: ComposeValidationJwtKeyMustBeAtLeast32Bytes!
+          SERVICE_AUTH_KEY: ComposeValidationServiceKeyMustBeAtLeast32Bytes!
+        run: docker compose config --quiet
+      - name: Validate observability configuration
+        run: |
+          docker run --rm -v "$PWD/observability/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro" otel/opentelemetry-collector-contrib:0.164.0 validate --config=/etc/otelcol-contrib/config.yaml
+          docker run --rm --entrypoint promtool -v "$PWD/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro" prom/prometheus:v3.14.0 check config /etc/prometheus/prometheus.yml
+          jq empty observability/grafana/dashboards/eshop-overview.json
+      - name: Build service images
+        run: |
+          docker build -f Aggregator.WebApi/Dockerfile -t eshop-aggregator:ci .
+          docker build -f Customer.Microservice/Dockerfile -t eshop-customer:ci .
+          docker build -f Order.Microservice/Dockerfile -t eshop-order:ci .
+          docker build -f Product.Microservice/Dockerfile -t eshop-product:ci .

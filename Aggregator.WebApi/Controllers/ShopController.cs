@@ -2,12 +2,15 @@
 using Aggregator.WebApi.Order;
 using Aggregator.WebApi.Product;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using System.Threading;
+using Polly.Timeout;
 
 namespace Aggregator.WebApi.Controllers;
 
@@ -30,24 +33,58 @@ public class ShopController : ControllerBase
     }
 
     [HttpGet("Customers/{customerName}")]
-    public async Task<IActionResult> GetAllByCustomerId(string customerName)
+    public async Task<IActionResult> GetAllByCustomerId(string customerName, CancellationToken cancellationToken)
     {
-        List<ProductApi> productApis = new();
-
-        CustomerApi customerApi = await _customerService.GetCustomerByNameAsync(customerName, 5000);
+        CustomerApi customerApi;
+        try
+        {
+            customerApi = await _customerService.GetCustomerByNameAsync(customerName, cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            return Problem(statusCode: StatusCodes.Status502BadGateway, title: "Customer service is unavailable.");
+        }
+        catch (TimeoutRejectedException)
+        {
+            return Problem(statusCode: StatusCodes.Status504GatewayTimeout, title: "Customer service timed out.");
+        }
 
         if (customerApi is null)
         {
             return NotFound();
         }
 
-        List<OrderApi> orderApis = await _orderService.GetOrdersByCustomerIdAsync(customerApi.Id, 5000);
-
-        foreach (OrderApi orderApi in orderApis)
+        List<OrderApi> orderApis;
+        try
         {
-            productApis.Add(await _productService.GetProductByIdAsync(orderApi.ProductId, 5000));
+            orderApis = await _orderService.GetOrdersByCustomerIdAsync(customerApi.Id, cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            return Problem(statusCode: StatusCodes.Status502BadGateway, title: "Order service is unavailable.");
+        }
+        catch (TimeoutRejectedException)
+        {
+            return Problem(statusCode: StatusCodes.Status504GatewayTimeout, title: "Order service timed out.");
         }
 
-        return Ok(productApis);
+        // Orders are independent reads. Fetch products concurrently instead of
+        // adding one full network round-trip per order to the response latency.
+        ProductApi[] productApis;
+        try
+        {
+            productApis = await Task.WhenAll(
+                orderApis.Select(order => _productService.GetProductByIdAsync(order.ProductId, cancellationToken)));
+        }
+        catch (HttpRequestException)
+        {
+            return Problem(statusCode: StatusCodes.Status502BadGateway, title: "Product service is unavailable.");
+        }
+        catch (TimeoutRejectedException)
+        {
+            return Problem(statusCode: StatusCodes.Status504GatewayTimeout, title: "Product service timed out.");
+        }
+
+        return Ok(productApis.Where(product => product is not null));
     }
 }

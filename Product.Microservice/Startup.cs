@@ -1,3 +1,9 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using OpenTelemetry.Metrics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,6 +39,7 @@ namespace Product.Microservice
                    Configuration.GetConnectionString("DefaultConnection"),
                    b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
             services.AddScoped<IApplicationDbContext>(provider => provider.GetService<ApplicationDbContext>());
+            services.AddScoped<Product.Microservice.Services.IInventoryService, Product.Microservice.Services.InventoryService>();
             #region Swagger
             services.AddSwaggerGen(c =>
             {
@@ -47,10 +54,42 @@ namespace Product.Microservice
                     Version = "v1",
                     Title = "Product Microservice API",
                 });
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    Description = "JWT issued by the configured trusted issuer."
+                });
+                c.AddSecurityDefinition("ServiceKey", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.ApiKey,
+                    Name = "X-Service-Key",
+                    In = ParameterLocation.Header,
+                    Description = "Internal service-to-service credential."
+                });
+                c.OperationFilter<Product.Microservice.Swagger.AuthorizeOperationFilter>();
             });
             #endregion
+            services.AddOpenTelemetry().ConfigureResource(resource => resource.AddService("Product.Microservice"))
+                .WithTracing(tracing => tracing.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddOtlpExporter())
+                .WithMetrics(metrics => metrics.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation().AddOtlpExporter());
+                        var jwtKey = Configuration["Jwt:SigningKey"] ?? throw new InvalidOperationException("Jwt:SigningKey must be configured.");
+            if (Encoding.UTF8.GetByteCount(jwtKey) < 32) throw new InvalidOperationException("Jwt:SigningKey must contain at least 32 bytes.");
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true, ValidIssuer = Configuration["Jwt:Issuer"],
+                    ValidateAudience = true, ValidAudience = Configuration["Jwt:Audience"],
+                    ValidateLifetime = true, ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+                };
+            });
+            services.AddAuthorization();
             services.AddControllers();
-            services.AddControllers();
+            services.AddHealthChecks().AddCheck<Product.Microservice.HealthChecks.DatabaseHealthCheck>("database", tags: new[] { "ready" });
+            services.AddHostedService<DatabaseInitializer>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -68,6 +107,7 @@ namespace Product.Microservice
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
             app.UseSwagger();
             app.UseSwaggerUI(c =>
@@ -77,6 +117,8 @@ namespace Product.Microservice
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = _ => false });
+                endpoints.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
             });
         }
     }

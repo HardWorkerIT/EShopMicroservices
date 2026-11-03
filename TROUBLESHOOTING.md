@@ -152,7 +152,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Server=host.docker.internal;Database=CustomerDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - ConnectionStrings__DefaultConnection=Server=host.docker.internal;Database=CustomerDB;User Id=sa;Password=<DB_PASSWORD from .env>;TrustServerCertificate=True;
     ports:
       - "5001:80"
     extra_hosts:
@@ -166,7 +166,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Server=host.docker.internal;Database=OrderDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - ConnectionStrings__DefaultConnection=Server=host.docker.internal;Database=OrderDB;User Id=sa;Password=<DB_PASSWORD from .env>;TrustServerCertificate=True;
     ports:
       - "5002:80"
     extra_hosts:
@@ -180,7 +180,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:80
-      - ConnectionStrings__DefaultConnection=Server=host.docker.internal;Database=ProductDB;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - ConnectionStrings__DefaultConnection=Server=host.docker.internal;Database=ProductDB;User Id=sa;Password=<DB_PASSWORD from .env>;TrustServerCertificate=True;
     ports:
       - "5003:80"
     extra_hosts:
@@ -292,7 +292,7 @@ docker stats
 docker exec -it customer-sqlserver /bin/bash
 
 # Проверка подключения к БД
-docker exec -it customer-sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd
+docker exec -it customer-sqlserver /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P <DB_PASSWORD from .env>
 ```
 
 ## Контакты и помощь

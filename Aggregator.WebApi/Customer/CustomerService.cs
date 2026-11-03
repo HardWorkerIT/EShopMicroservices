@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,11 +18,12 @@ public sealed class CustomerService : ICustomerService
         _customerServiceUrl = configuration["MicroserviceUrls:CustomerService"] ?? "http://localhost:5001";
     }
 
-    public async Task<CustomerApi> GetCustomerByNameAsync(string customerName, int cancelTimeout)
+    public async Task<CustomerApi> GetCustomerByNameAsync(string customerName, System.Threading.CancellationToken cancellationToken)
     {
-        using CancellationTokenSource cancellationTokenSource = new(cancelTimeout);
-
-        var response = await _httpClient.GetAsync($"{_customerServiceUrl}/api/v1/Customer/Nickname/{customerName}", cancellationTokenSource.Token);
-        return JsonConvert.DeserializeObject<CustomerApi>(await response.Content.ReadAsStringAsync(cancellationTokenSource.Token));
+        var url = $"{_customerServiceUrl.TrimEnd('/')}/api/v1/Customer/Nickname/{Uri.EscapeDataString(customerName)}";
+        using var response = await _httpClient.GetAsync(url, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+        response.EnsureSuccessStatusCode();
+        return JsonConvert.DeserializeObject<CustomerApi>(await response.Content.ReadAsStringAsync(cancellationToken));
     }
 }

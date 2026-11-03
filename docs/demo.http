@@ -1,0 +1,49 @@
+@gateway = http://localhost:5000
+@customer = http://localhost:5001
+@orders = http://localhost:5002
+@products = http://localhost:5003
+@jwt = REPLACE_WITH_JWT_FROM_TRUSTED_ISSUER
+@serviceKey = REPLACE_WITH_SERVICE_AUTH_KEY_FROM_ENV
+
+### Gateway: resolve customer, orders and products
+GET {{gateway}}/api/v1/Shop/Customers/Guest
+Accept: application/json
+
+### Customer readiness (includes database)
+GET {{customer}}/health/ready
+
+### Customer list, paginated
+GET {{customer}}/api/v1/Customer?page=1&pageSize=20
+Accept: application/json
+
+### Product catalog with filters
+GET {{products}}/api/v1/Product?page=1&pageSize=20&name=phone&minRate=10&maxRate=500&sortBy=rate&descending=true
+Accept: application/json
+
+### Orders belonging to the authenticated customer
+GET {{orders}}/api/v1/Order?page=1&pageSize=20
+Authorization: Bearer {{jwt}}
+Accept: application/json
+
+### Create an order (JWT customer_id must match customerId; this reserves stock)
+POST {{orders}}/api/v1/Order
+Authorization: Bearer {{jwt}}
+Content-Type: application/json
+
+{
+  "productId": 1,
+  "customerId": 1,
+  "quantity": 1,
+  "date": "2026-11-02T00:00:00Z",
+  "orderStatus": 0
+}
+
+### Internal inventory reservation (service key required)
+POST {{products}}/api/v1/Product/1/reserve
+X-Service-Key: {{serviceKey}}
+Content-Type: application/json
+
+{
+  "quantity": 1,
+  "reservationId": "{{$guid}}"
+}

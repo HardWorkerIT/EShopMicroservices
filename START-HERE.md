@@ -23,31 +23,27 @@
 .\start-services.bat
 ```
 
+Перед первым запуском скопируйте `.env.example` в `.env` и замените все демонстрационные значения секретов уникальными паролями и ключами. Для каждого сервиса задаются отдельные runtime и migration пароли; `.env` исключён из Git.
+Затем выполните `docker compose up --build -d`. Compose создаёт базы и отдельные логины автоматически: runtime-логины имеют только права чтения/записи, а startup migrations используют отдельные migration credentials.
+
 ### Вариант 2: Через PowerShell
 
 ```powershell
-# 1. Запустить контейнеры
-docker-compose up -d
+# 1. После настройки .env запустить сервисы и базы
+docker compose up --build -d
 
-# 2. Подождать 45 секунд
-Start-Sleep -Seconds 45
-
-# 3. Создать базы данных
-docker exec customer-sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong@Passw0rd" -C -Q "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'CustomerDB') CREATE DATABASE [CustomerDB]"
-docker exec order-sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong@Passw0rd" -C -Q "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'OrderDB') CREATE DATABASE [OrderDB]"
-docker exec product-sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "YourStrong@Passw0rd" -C -Q "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'ProductDB') CREATE DATABASE [ProductDB]"
-
-# 4. Перезапустить микросервисы
-docker restart customer-service order-service product-service
+# 2. Следить за состоянием и логами
+docker compose ps
+docker compose logs -f
 ```
 
-### Вариант 3: Через Docker Compose
+### Запуск без сборки образов
 
 ```bash
 docker-compose up -d
 ```
 
-Затем используйте скрипт `create-databases.ps1` для создания баз данных.
+Используйте этот вариант, если образы уже собраны. Базы и отдельные логины создаются автоматически.
 
 ## 🌐 Доступ к сервисам:
 
@@ -68,19 +64,19 @@ docker-compose up -d
 - Server: `localhost,1433`
 - Database: `CustomerDB`
 - User: `sa`
-- Password: `YourStrong@Passw0rd`
+- Password: `<DB_PASSWORD from .env>`
 
 ### Order Database
 - Server: `localhost,1434`
 - Database: `OrderDB`
 - User: `sa`
-- Password: `YourStrong@Passw0rd`
+- Password: `<DB_PASSWORD from .env>`
 
 ### Product Database
 - Server: `localhost,1435`
 - Database: `ProductDB`
 - User: `sa`
-- Password: `YourStrong@Passw0rd`
+- Password: `<DB_PASSWORD from .env>`
 
 ## 🛠️ Управление контейнерами:
 

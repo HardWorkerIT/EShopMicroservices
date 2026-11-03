@@ -9,6 +9,8 @@ namespace Order.Microservice.Data
     public interface IApplicationDbContext
     {
         DbSet<Entities.Order> Orders { get; set; }
+        DbSet<Entities.OutboxMessage> OutboxMessages { get; set; }
+        DbSet<Entities.InventoryReservationAttempt> InventoryReservationAttempts { get; set; }
         Task<int> SaveChangesAsync();
     }
 }

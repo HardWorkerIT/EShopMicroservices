@@ -9,6 +9,7 @@ namespace Product.Microservice.Data
     public interface IApplicationDbContext
     {
         DbSet<Entities.Product> Products { get; set; }
+        DbSet<Entities.InventoryReservation> InventoryReservations { get; set; }
         Task<int> SaveChangesAsync();
     }
 }

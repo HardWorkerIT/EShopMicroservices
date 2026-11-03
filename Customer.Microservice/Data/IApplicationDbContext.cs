@@ -9,6 +9,7 @@ namespace Customer.Microservice.Data
     public interface IApplicationDbContext
     {
         DbSet<Entities.Customer> Customers { get; set; }
+        DbSet<Entities.OrderProjection> OrderProjections { get; set; }
         Task<int> SaveChangesAsync();
     }
 }

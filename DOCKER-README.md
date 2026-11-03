@@ -41,10 +41,12 @@
 Из корневой директории проекта выполните:
 
 ```bash
-docker-compose up -d
+cp .env.example .env
+# Замените все демонстрационные пароли и ключи в .env уникальными секретами.
+docker compose up --build -d
 ```
 
-Эта команда:
+Compose дождётся готовности каждого SQL Server перед запуском соответствующего API. Эта команда:
 - Скачает необходимые образы Docker
 - Создаст 3 контейнера с MS SQL Server
 - Соберет и запустит 3 микросервиса
@@ -86,19 +88,19 @@ docker-compose logs -f product-service
 - Server: localhost,1433
 - Database: CustomerDB
 - User: sa
-- Password: YourStrong@Passw0rd
+- Password: <DB_PASSWORD from .env>
 
 **Order Database:**
 - Server: localhost,1434
 - Database: OrderDB
 - User: sa
-- Password: YourStrong@Passw0rd
+- Password: <DB_PASSWORD from .env>
 
 **Product Database:**
 - Server: localhost,1435
 - Database: ProductDB
 - User: sa
-- Password: YourStrong@Passw0rd
+- Password: <DB_PASSWORD from .env>
 
 ## Команды Docker Compose
 
@@ -239,7 +241,7 @@ SQL Server требует минимум 2 GB RAM на инстанс. Увел�
 
 ## Изменение пароля SQL Server
 
-⚠️ **Важно**: Пароль `YourStrong@Passw0rd` используется только для разработки. Для production используйте надежный пароль.
+⚠️ **Важно**: Пароль `<DB_PASSWORD from .env>` используется только для разработки. Для production используйте надежный пароль.
 
 Чтобы изменить пароль:
 

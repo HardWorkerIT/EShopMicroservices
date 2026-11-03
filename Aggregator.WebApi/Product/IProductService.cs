@@ -4,5 +4,5 @@ namespace Aggregator.WebApi.Product;
 
 public interface IProductService
 {
-    Task<ProductApi> GetProductByIdAsync(int productId, int cancelTimeout);
+    Task<ProductApi> GetProductByIdAsync(int productId, System.Threading.CancellationToken cancellationToken);
 }

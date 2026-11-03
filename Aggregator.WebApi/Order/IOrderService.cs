@@ -6,5 +6,5 @@ namespace Aggregator.WebApi.Order;
 
 public interface IOrderService
 {
-    Task<List<OrderApi>> GetOrdersByCustomerIdAsync(int customerId, int cancelTimeout);
+    Task<List<OrderApi>> GetOrdersByCustomerIdAsync(int customerId, System.Threading.CancellationToken cancellationToken);
 }

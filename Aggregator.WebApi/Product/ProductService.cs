@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System.Net.Http;
 using System.Threading;
@@ -17,11 +17,11 @@ public sealed class ProductService : IProductService
         _productServiceUrl = configuration["MicroserviceUrls:ProductService"] ?? "http://localhost:5003";
     }
 
-    public async Task<ProductApi> GetProductByIdAsync(int productId, int cancelTimeout)
+    public async Task<ProductApi> GetProductByIdAsync(int productId, System.Threading.CancellationToken cancellationToken)
     {
-        using CancellationTokenSource cancellationTokenSource = new(cancelTimeout);
-
-        var response = await _httpClient.GetAsync($"{_productServiceUrl}/api/v1/Product/{productId}", cancellationTokenSource.Token);
-        return JsonConvert.DeserializeObject<ProductApi>(await response.Content.ReadAsStringAsync(cancellationTokenSource.Token));
+        using var response = await _httpClient.GetAsync($"{_productServiceUrl.TrimEnd('/')}/api/v1/Product/{productId}", cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+        response.EnsureSuccessStatusCode();
+        return JsonConvert.DeserializeObject<ProductApi>(await response.Content.ReadAsStringAsync(cancellationToken));
     }
 }

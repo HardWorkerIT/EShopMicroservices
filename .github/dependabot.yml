@@ -1,0 +1,86 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: "/Aggregator.WebApi"
+    schedule:
+      interval: weekly
+    groups:
+      nuget-patch-and-minor:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: nuget
+    directory: "/Customer.Microservice"
+    schedule:
+      interval: weekly
+    groups:
+      nuget-patch-and-minor:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: nuget
+    directory: "/Order.Microservice"
+    schedule:
+      interval: weekly
+    groups:
+      nuget-patch-and-minor:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: nuget
+    directory: "/Product.Microservice"
+    schedule:
+      interval: weekly
+    groups:
+      nuget-patch-and-minor:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: nuget
+    directory: "/Integration.Tests"
+    schedule:
+      interval: weekly
+    groups:
+      nuget-patch-and-minor:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: docker
+    directory: "/Aggregator.WebApi"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: "/Customer.Microservice"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: "/Order.Microservice"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: "/Product.Microservice"
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
